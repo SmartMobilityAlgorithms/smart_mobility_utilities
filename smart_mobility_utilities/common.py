@@ -136,7 +136,7 @@ def cost(G, route):
     weight = 0
     for u, v in zip(route, route[1:]):
         weight += G[u][v][0]['length']   
-    return weight
+    return round(weight,4)
 
 
 """

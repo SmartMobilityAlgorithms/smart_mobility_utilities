@@ -37,7 +37,7 @@ def draw_map(G, highlight = None , zoom = 15, force_leaflet=False):
     center_osmid = get_center(G)
     #center_osmid = ox.stats.extended_stats(G,ecc=True)['center'][0]
     if len(G) >= 1000 and not force_leaflet:
-        print(f"The graph has {len(G)} which is a lot, we will use basic faster folium instead")
+        print(f"The graph has {len(G)} elements, using folium to improve performance.")
         if highlight:
             G_gdfs = ox.graph_to_gdfs(G)
             nodes_frame = G_gdfs[0]
@@ -96,24 +96,29 @@ m: ipyleaflet/folium map for the osmnx graph with the route highlighted as AntPa
 
 def draw_route(G, route, zoom = 15, force_leaflet=False):
     
-    if len(G) >= 1000 and not force_leaflet:
-        print(f"The graph has {len(G)} which is a lot, we will use basic faster folium instead")
-        m = ox.plot_route_folium(G = G, route = route)
-        return m
-
     center_osmid = get_center(G)
     G_gdfs = ox.graph_to_gdfs(G)
     nodes_frame = G_gdfs[0]
     ways_frame = G_gdfs[1]
     center_node = nodes_frame.loc[center_osmid]
     location = (center_node['y'], center_node['x'])
-    m = lf.Map(center = location, zoom = zoom)
+    
 
     start_node = nodes_frame.loc[route[0]]
     end_node = nodes_frame.loc[route[len(route)-1]]
 
     start_xy = (start_node['y'], start_node['x'])
     end_xy = (end_node['y'], end_node['x'])
+    
+
+    if len(route) >= 500 and not force_leaflet:
+        print(f"The route has {len(G)} elements, using folium to improve performance.")
+        m = ox.plot_route_folium(G = G, route = route, zoom= zoom, color='red')
+        fl.Marker(location=start_xy).add_to(m)
+        fl.Marker(location=end_xy).add_to(m)
+        return m
+
+    m = lf.Map(center = location, zoom = zoom)
     marker = lf.Marker(location = start_xy, draggable = False)
     m.add_layer(marker)
     marker = lf.Marker(location = end_xy, draggable = False)

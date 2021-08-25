@@ -12,6 +12,7 @@ from collections import deque
 from itertools import islice
 from smart_mobility_utilities.common import *
 from typing import List
+from children import get_children
 import heapq
 
 
@@ -92,17 +93,25 @@ def dijkstra(G: networkx.MultiDiGraph, origin:Node, destination:Node):
             
     return route
 
-def hill_climbing(G:networkx.MultiDiGraph, origin:Node, destination:Node, num_children:int=20, starter:List[int]=None):
+def hill_climbing(G:networkx.MultiDiGraph, 
+                origin:Node, 
+                destination:Node, 
+                num_children:int=20, 
+                starter:List[int]=None,
+                multiprocessing:bool=False,
+                workers:int=4):
+
     if starter is not None:
         current = starter
     else:
         current = randomized_search(G, origin.osmid, destination.osmid)
-    neighbours = [*islice(children_route(G, current), num_children)]
+    
+    neighbours = get_children(G,current,num_children,multiprocessing,workers)
     shortest = min(neighbours , key = lambda route : cost(G, route))
 
     while cost(G, shortest) < cost(G, current):
         current = shortest
-        neighbours = [*islice(children_route(G, current), num_children)]
+        neighbours = get_children(G,current,num_children,multiprocessing,workers)
         shortest = min(neighbours , key = lambda route : cost(G, route))
 
     return current

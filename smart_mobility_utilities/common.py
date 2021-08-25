@@ -109,23 +109,7 @@ It is iterator function so it is lazy evaluated to avoid dealing with routes wit
 number of nodes.
 """
 
-def children_route(G, route):
-    for i in range(1, len(route) - 1):
-        for j in range(i, len(route) -1):
-            # we can't work on the route list directly
-            # because lists are passed by reference
-            stitched = copy.deepcopy(route)
-            failing_nodes = copy.deepcopy(route[i:j+1])
-            to_be_stitched = shortest_path_with_failed_nodes(G, stitched, stitched[i-1], stitched[j+1], failing_nodes)
-            
-            # this would happen because one of the failing
-            # nodes are articulation node and caused the graph
-            # to be disconnected
-            if to_be_stitched == math.inf: continue
 
-            stitched[i:j+1] = to_be_stitched[1:-1]      # we need to skip the first and starting nodes of this route
-                                                        # because these nodes already exit
-            yield stitched
 
 """
 Given an iterable with nodes ids and the networkx graph
@@ -155,77 +139,7 @@ def cost_tour(G, route):
         weight += G[u][v]['weight']
     return weight
 
-"""
-Find the route between `source` and `destination` nodes when the list of nodes
-specified in `failed` acts if they are not in the graph.
-"""
 
-def shortest_path_with_failed_nodes(G, route ,source, target, failed : list):
-    origin = Node(graph = G, osmid = source)
-    destination = Node(graph = G, osmid = target)
-
-    ## you can't introduce failure in the source and target
-    # node, because your problem will lose its meaning
-    if source in failed: failed.remove(source)
-    if target in failed: failed.remove(target)
-    
-    # if after removing source/target node from failed
-    # list - just return math.inf which is equivalent to failure in search
-    if len(failed) == 0: return math.inf
-
-    # we need to flag every node whether it is failed or not
-    failure_nodes = {node: False for node in G.nodes()}
-    failure_nodes.update({node: True for node in failed})
-
-    # we need to make sure that while expansion we don't expand
-    # any node from the original graph to avoid loops in our route
-    tabu_list = route[:route.index(source)] \
-                + \
-                route[route.index(target) + 1:] 
-
-    # the normal implementation of dijkstra
-    shortest_dist = {node: math.inf for node in G.nodes()}
-    unrelaxed_nodes = [Node(graph = G, osmid = node) for node in G.nodes()]
-    seen = set()
-
-    shortest_dist[source] = 0
-
-    while len(unrelaxed_nodes) > 0:
-        node = min(unrelaxed_nodes, key = lambda node : shortest_dist[node])
-
-        # if we have relaxed articulation nodes in our graph
-        # halt the process -- we have more than one component
-        # in our graph which makes the question of shortest path
-        # invalid
-
-        if shortest_dist[node.osmid] == math.inf: return math.inf
-
-        if node == destination:
-            return node.path()
-
-        unrelaxed_nodes.remove(node); seen.add(node.osmid) # relaxing the node
-
-        for child in node.expand():
-            # if it is failed node, skip it
-            if failure_nodes[child.osmid] or\
-                child.osmid in seen or\
-                child.osmid in tabu_list:
-                continue
-
-            child_obj = next((node for node in unrelaxed_nodes if node.osmid == child.osmid), None)
-            child_obj.distance = child.distance
-
-            distance = shortest_dist[node.osmid] + child.distance
-            if distance < shortest_dist[child_obj.osmid]:
-                shortest_dist[child_obj.osmid] = distance
-                child_obj.parent = node
-
-    # in case the node can't be reached from the origin
-    # this return happens when the node is not on the graph
-    # at all, if it was on a different component the second
-    # return will be executed -- this is the third return
-    
-    return math.inf
 
 """
 Generate random simple path between source and destination node

@@ -3,10 +3,7 @@ import math
 from copy import deepcopy
 from itertools import islice
 import copy
-import multiprocessing
-from common import Node
-import gc
-import logging
+from smart_mobility_utilities.common import Node
 
 def shortest_path_with_failed_nodes(G, route ,i,j, failed : list):
     source = route[i-1]
@@ -77,8 +74,11 @@ def shortest_path_with_failed_nodes(G, route ,i,j, failed : list):
     
     return math.inf
 
+def shortest_path_handler(args):
+    return shortest_path_with_failed_nodes(*args)
 
-def children_route(G, route):
+def children_route(G, route, limit):
+    results = []
     for i in range(1, len(route) - 1):
         for j in range(i, len(route) -1):
             # we can't work on the route list directly
@@ -90,51 +90,73 @@ def children_route(G, route):
             to_be_stitched, k, l, r = args
             stitched[i:j+1] = to_be_stitched[1:-1]      # we need to skip the first and starting nodes of this route
                                                         # because these nodes already exit
-            yield stitched
+            results.append(stitched)
+            if len(results) == limit: return results
+
+def children_route_handler(args):
+    return children_route(*args)
+
+def get_beam(G,routes, num_children=10, multiprocessing=False, workers=4):
+    if multiprocessing:
+        worker = ChildRoutesGenerator(workers=workers, G=G, route=routes[0], limit=num_children)
+        results = worker.do_beam(routes)
+        return results
+    results = []
+    for route in routes:
+        children = children_route(G, route, num_children)
+        results.append(children)
+    return results
 
 def get_children(G, route, num_children=20, multiprocessing=False, workers=4):
     if multiprocessing:
         worker = ChildRoutesGenerator(workers=workers,G = G, route=route, limit=num_children)
         worker.do_job()
+        worker.pool.terminate()
+        worker.pool.join()
         return worker.result
-    return [*islice(children_route(G,route),num_children)]
+    return children_route(G,route,num_children)
 
 class ChildRoutesGenerator():
     def __init__(self, workers, G, route, limit=20):
-        mpl = multiprocessing.log_to_stderr()
-        mpl.setLevel(logging.INFO)
-        cpname = multiprocessing.current_process().name
-        print(cpname)
         self.workers = workers
         self.pool = Pool(processes=self.workers)
         self.result = []
         self.limit = limit
         self.G = G
         self.route = route
-        
-    def callback(self, result):
-        if result == math.inf: 
-            return
-        new,i,j,old = result
-        old[i:j+1] = new[1:-1]
-        self.result.append(old)
-        if len(self.result) == self.limit:
-            self.pool.terminate()
+
+    def do_beam(self,routes):
+        args = []
+        results = []
+        for r in routes:
+            args.append((self.G,r,self.limit))
+        for _ in self.pool.imap_unordered(children_route_handler,args, chunksize=1):
+            results.append(_)
+        self.pool.terminate()
+        self.pool.join()
+        return results
 
     def do_job(self, route=None, refresh=False):
+        
         if refresh: self.pool = Pool(processes=self.workers)
         if route is not None:
             self.route = route
-        asy = []
+        args = []
+        
         for i in range(1, len(self.route) - 1):
             for j in range(i, len(self.route) -1):
                 stitched = deepcopy(self.route)
                 failing_nodes = deepcopy(self.route[i:j+1])
-                asy.append(self.pool.apply_async(shortest_path_with_failed_nodes, 
-                                  args=(self.G, stitched, i, j, failing_nodes), 
-                                  callback=self.callback))
-
-        self.pool.close()
+                args.append((self.G, stitched, i, j, failing_nodes))
+        
+        for _ in self.pool.imap_unordered(shortest_path_handler,args, chunksize=1):
+            if _ == math.inf: 
+                continue
+            new,i,j,old = _
+            old[i:j+1] = new[1:-1]
+            self.result.append(old)
+            if len(self.result) == self.limit:
+                break
+        self.pool.terminate()
         self.pool.join()
-        gc.collect()
         return self.result

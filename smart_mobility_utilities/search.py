@@ -9,10 +9,9 @@ A collection of graph search algorithms, as seen in the examples from the book.
 """
 import networkx
 from collections import deque
-from itertools import islice
 from smart_mobility_utilities.common import *
 from typing import List
-from children import get_children
+from children import get_children, get_beam
 import heapq
 
 
@@ -116,7 +115,15 @@ def hill_climbing(G:networkx.MultiDiGraph,
 
     return current
     
-def beam(G:networkx.MultiDiGraph, origin:Node, destination:Node, num_neighbours:int=10, k:int=10, starter:List[int]=None):
+def beam(G:networkx.MultiDiGraph, 
+        origin:Node, 
+        destination:Node, 
+        num_neighbours:int=10, 
+        k:int=10, 
+        starter:List[int]=None,
+        multiprocessing:bool=False,
+        workers:int=4
+        ):
     seen = set()
     beam = [randomized_search(G,origin.osmid,destination.osmid) for _ in range(k)]
     if starter is not None:
@@ -124,33 +131,33 @@ def beam(G:networkx.MultiDiGraph, origin:Node, destination:Node, num_neighbours:
     # the seen routes must be converted to a tuple to be hashable to be stored in a set
     for route in beam: seen.add(tuple(route))
     pool = []
-
-    for route in beam:
-        children = [*islice(children_route(G, route), num_neighbours)]
-        for child in children:
-            if tuple(child) in seen: continue
+    if multiprocessing:
+        children = get_beam(G,beam,num_neighbours,multiprocessing=True,workers=workers)
+    else:
+        children = get_beam(G,beam,num_neighbours)
+    for child in children:
+        for node in child:
+            if tuple(node) in seen: continue
             else: 
-                pool.append(child)
-                seen.add(tuple(child))
+                pool.append(node)
+                seen.add(tuple(node))
     pool += beam
     last_beam = None
-    
     while beam != last_beam:
         last_beam = beam
         beam = heapq.nsmallest(k, pool, key = lambda route: cost(G, route))
         
-        for route in beam: seen.add(tuple(route)) 
-        
+        for route in beam: seen.add(tuple(route))    
         pool = []
-        for route in beam:
-            children = [*islice(children_route(G, route), num_neighbours)]
-            for child in children:
-                if tuple(child) in seen: continue
-                else: pool.append(child); seen.add(tuple(child))
-        pool += beam
-                
-        
-
+        if multiprocessing:
+            children = get_beam(G,beam,num_neighbours,multiprocessing=True,workers=workers)
+        else:
+            children = get_beam(G,beam,num_neighbours)
+        for child in children:
+            for node in child:
+                if tuple(node) in seen: continue
+                else: pool.append(node); seen.add(tuple(node))
+        pool += beam   
     route = min(beam, key = lambda route : cost(G, route)) 
     return route
 

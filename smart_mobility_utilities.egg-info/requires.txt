@@ -1,3 +1,2 @@
 networkx
 typing
-Cython>=0.29.24

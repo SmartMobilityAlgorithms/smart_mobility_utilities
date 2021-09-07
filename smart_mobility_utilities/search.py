@@ -13,6 +13,7 @@ from smart_mobility_utilities.common import *
 from typing import List
 from children import get_children, get_beam
 import heapq
+import math
 
 
 def BFS(origin:Node, destination: Node):
@@ -52,7 +53,6 @@ def DFS(origin:Node, destination: Node):
     return route
 
 def dijkstra(G: networkx.MultiDiGraph, origin:Node, destination:Node):
-    import math
 
     # Using a set here avoids the problem with self loops
     seen = set()

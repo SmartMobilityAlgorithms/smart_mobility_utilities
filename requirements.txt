@@ -1,2 +1,6 @@
 networkx
 typing
+numpy
+pandas
+requests
+

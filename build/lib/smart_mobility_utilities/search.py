@@ -11,7 +11,7 @@ import networkx
 from collections import deque
 from smart_mobility_utilities.common import *
 from typing import List
-from smart_mobility_utilities.children import get_children, get_beam
+from children import get_children, get_beam
 import heapq
 import math
 

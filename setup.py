@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 with open("README.md", "r") as fh:
@@ -12,10 +12,13 @@ with open("LICENSE", encoding="utf-8-sig") as f:
 
 setup(
     name='smart_mobility_utilities',
-    version='0.0.1',
+    version='0.0.2',
     author='Alaa Khamis and Yinan Wang',
     long_description=long_description,
+    long_description_content_type="text/markdown",
+    author_email="yinanwang@sierra.one",
     install_requires=requirements,
-    license=license,
+    packages=find_packages(exclude=("tests",)),
+    license="MIT",
     python_requires=">=3.6"
 )

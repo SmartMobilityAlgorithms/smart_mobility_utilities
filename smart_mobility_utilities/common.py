@@ -62,52 +62,6 @@ class Node:
     def __hash__(self):
         return hash(self.osmid)
 
-
-
-"""
-Find the neighbours of a route that has exact source/destination node.
-
-We had to define the meaning of finding neighbours for a route in a graph,
-because we needed it in local search algorithms.
-
-Here is how it works; we have a route of length 10 from node A to node Z as follows
-
-    route = [A, B, C, D, E, F, G, H, I, Q, Z]
-
-If we make the node B to fail/contracted so we need to find a new way
-to get from A to C
-
-    child = [A, M, N, C, D, E, F, G, H, I, Q, Z]
-
-The new route from A to C is [A, M, N, C] instead of [A, B, C], let's call
-that our first child. Our second child when we delete nodes B,C from the original
-route and see how we can get from A to D instead (shortest_path_with_failed_nodes), 
-our third child would be by failing nodes B,C,D, our fourth would be failing the node B,C,D,E.
-
-That will produce 9 children (we have 11 nodes), so we go in the same manner but
-we start by failing C not B and after that C,D instead of B,C this will produce
-8 children. After that we start failing D and then D,E and then D,E,F and that round
-produces 7 children. Hopefully you got what we are doing. 
-
-So a route with 11 node will produce (9+8+7+6+5+4+3+2+1) children.
-
-Hence, a route with N nodes will produce O((N-2)*(N-1)/2) children.
-
-Please be aware that this number is an upper limit to the number of children because
-this process of failing some nodes in the route and try to stitch the route could invalidate
-the process because if one of these failing nodes are articulation the graph would be 
-disconnected into >2 components.
-
-We catch articulation points in dijkstra if we are going to relax node with distance
-equal to math.inf because this means that there is no edge between it and any previous
-relaxed node.
-
-It is iterator function so it is lazy evaluated to avoid dealing with routes with big 
-number of nodes.
-"""
-
-
-
 """
 Given an iterable with nodes ids and the networkx graph
 The function calculated the weight of the route

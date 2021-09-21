@@ -259,11 +259,11 @@ def bidirectional_astar(G: networkx.MultiDiGraph, origin: Node, destination: Nod
             altr_expand = True
     return route
 
-def benchmark(algorithm,use_G=True,**kwargs):
+def benchmark(algorithm,use_G=True,include_cost=True,**kwargs):
     G = kwargs.pop('G') if not use_G else kwargs['G']
     start_time = process_time()
     result = algorithm(**kwargs)
     end_time = process_time()
-    result_cost = cost(G,result)
+    result_cost = cost(G,result) if include_cost else 0
     return algorithm.__name__,end_time-start_time, result_cost
 

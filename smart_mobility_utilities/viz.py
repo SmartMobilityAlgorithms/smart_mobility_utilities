@@ -126,9 +126,12 @@ def draw_route(G, route, zoom = 15, force_leaflet=False):
 
     for u, v in zip(route[0:], route[1:]):
         try:
-            x, y = (ways_frame.query(f'u == {u} and v == {v}').to_dict('list')['geometry'])[0].coords.xy
+            geo = (ways_frame.query(f'u == {u} and v == {v}').to_dict('list')['geometry'])
+            m_geo = min(geo,key=lambda x:x.length)
         except:
-            x, y = (ways_frame.query(f'u == {v} and v == {u}').to_dict('list')['geometry'])[0].coords.xy
+            geo = (ways_frame.query(f'u == {v} and v == {u}').to_dict('list')['geometry'])
+            m_geo = min(geo,key=lambda x:x.length)
+        x, y = m_geo.coords.xy
         points = map(list, [*zip([*y],[*x])])
         ant_path = lf.AntPath(
             locations = [*points], 

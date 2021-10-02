@@ -1,95 +1,150 @@
-import networkx
+import networkx as nx
 import math
+from copy import deepcopy
 
-def dijkstra_with_contraction(G, source, destination, contracted = None):
-    networkx.set_node_attributes(G, {contracted: True}, 'contracted')
-        
-    shortest_path = dict()
-    heap = list()
-    
-    for i in G.nodes():
-        if not networkx.get_node_attributes(G, 'contracted')[i]:
-            shortest_path[i] = math.inf
-            heap.append(i)
-    shortest_path[source] = 0
-    
-    while len(heap) > 0:
-        
-        q = min(heap, key = lambda node : shortest_path[node])
-        if q == destination:
-            networkx.set_node_attributes(G, {contracted: False}, 'contracted')
-            return shortest_path[q]
-        heap.remove(q)
-        
-        for v in G[q]:
-            # if the node is contracted we skip it
-            if not networkx.get_node_attributes(G, 'contracted')[v]:
-                distance = shortest_path[q] + G[q][v]['weight']
-                if distance < shortest_path[v]:
-                    shortest_path[v] = distance
-                    
-    networkx.set_node_attributes(G, {contracted: False}, 'contracted')
-    
-    return math.inf # if we can't reach the destination
+def shortest_paths(G):
+    size = 0
+    shortest_paths = {x:y for x,y in nx.shortest_path_length(G, weight='length')}
+    for x in shortest_paths:
+        shortest_paths[x] = {u:round(v,3) for u,v in shortest_paths[x].items()}
+        size += len(shortest_paths[x])
+    for u in G.nodes:
+        for v in G.nodes:
+            if v not in shortest_paths[u]:
+                shortest_paths[u][v] = math.inf
+                size +=1
+    return shortest_paths
 
-def calculate_edge_difference(G, shortest_paths):
-    edge_difference = list()
-    seenBefore = list()
-    
-    for i in G.nodes():
-        # used in edge difference calculations
-        edges_incident = len(G[i])
+def edge_differences(G,sp):
+    edge_diffs = dict()
+    seen_list = []
 
-        # we will be deleting the node entry
-        # from the original shortest paths
-        # dictionary so we need to save its state
-        # for later iterations
-        contracted_node_paths = shortest_paths[i]
-        del shortest_paths[i]
-        
-        # excluding the node that we have just contracted
-        new_graph = [*G.nodes()] 
-        new_graph.remove(i)
-        
-        # let's compute the new shortest paths between
-        # the nodes of the graph without the contracted
-        # node so we can see the changes and add arcs 
-        # to the graph accordingly but that is in
-        # the algorithm itself 
-        new_shortest_paths = dict()
-
-        for source in new_graph:
-            new_shortest_paths[source] = dict()
-            for destination in new_graph:
-                # path the contracted node "i" to compute new shortest paths accordingly
-                new_shortest_paths[source][destination] = dijkstra_with_contraction(G, \
-                                                                                    source, \
-                                                                                    destination, \
-                                                                                    contracted = i)
-        # the add arcs to keep the graph all pairs shortest paths invariant
+    for node in G.nodes:
+        edges_incident = len(G[node])
+        if edges_incident == 1: # Handle terminating points
+            edge_diffs[node] = -1
+            continue
+        new_graph = deepcopy(G)
+        new_graph.remove_node(node)
         shortcuts = 0
+        for neighbour in G[node]:
+            for other_neighbour in G[node]:
 
-        for source in new_shortest_paths:
-            # we get a copy from the original and the new shortest paths dictionary
-            SP_contracted = new_shortest_paths[source]
-            SP_original = shortest_paths[source]
-            for destination in SP_contracted:
-                # this is statement so we don't add 2 arcs
-                # for the same pair of nodes 
-                if [source, destination] in seenBefore: continue
-                seenBefore.append(sorted((source,destination)))
-                
-                # if there is a difference between the original SP and
-                # post-contraction SP -- just add new arc
-                if SP_contracted[destination] != SP_original[destination]:
-                    shortcuts += 1
-        
-        # let's leave the dictionary as we took it 
-        # from the last iteration
-        shortest_paths[i] = contracted_node_paths
-        
-        # this is the value of the contraction
-        # heuristic for that node
+                if neighbour == other_neighbour: continue
+                if [neighbour,other_neighbour] in seen_list: continue
+                seen_list.append([neighbour,other_neighbour])
+                old_sp = sp[neighbour][other_neighbour]
+                old_sp_rev = sp[other_neighbour][neighbour]
+                try:
+                    new_sp = nx.shortest_path_length(new_graph,neighbour,other_neighbour, weight='length')
+                except:
+                    new_sp = math.inf
+                try:
+                    new_sp_rev = nx.shortest_path_length(new_graph,other_neighbour,neighbour, weight='length')
+                except:
+                    new_sp_rev = math.inf
+                need_new = old_sp != new_sp
+                need_new_rev = old_sp_rev != new_sp_rev
+                if need_new: shortcuts +=1
+                if need_new_rev: shortcuts+=1
         ED = shortcuts - edges_incident
-        edge_difference.append((i, ED))
-    return edge_difference
+        edge_diffs[node] = ED
+    return sorted(edge_diffs, key=lambda x:edge_diffs[x])
+
+def contract_graph(G: nx.DiGraph, edge_difference, sp):
+    # to keep track of the edges added after the algorithm finishes
+
+    edge_diffs = dict()
+    seen_list = []
+
+    for node in edge_difference:
+        edges_incident = len(G[node])
+        if edges_incident == 1: continue # Terminating points
+
+        new_graph = deepcopy(G)
+        new_graph.remove_node(node)
+
+        for neighbour in G[node]:
+            for other_neighbour in G[node]:
+
+                if neighbour == other_neighbour: continue
+                if [neighbour,other_neighbour] in seen_list: continue
+                seen_list.append([neighbour,other_neighbour])
+                old_sp = sp[neighbour][other_neighbour]
+                old_sp_rev = sp[other_neighbour][neighbour]
+                try:
+                    new_sp = nx.shortest_path_length(new_graph,neighbour,other_neighbour, weight='length')
+                except:
+                    new_sp = math.inf
+                try:
+                    new_sp_rev = nx.shortest_path_length(new_graph,other_neighbour,neighbour, weight='length')
+                except:
+                    new_sp_rev = math.inf
+                need_new = old_sp != new_sp
+                need_new_rev = old_sp_rev != new_sp_rev
+
+                if need_new:
+                    G.add_edge(neighbour,other_neighbour,length=old_sp,midpoint=node)
+                if need_new_rev:
+                    G.add_edge(other_neighbour,neighbour,length=old_sp_rev,midpoint=node)
+
+def generate_dijkstra(G, source, hierarchical_order, direction = 'up', weight='length'):
+
+    # initializing 
+    SP = dict()
+    parent = dict()
+    unrelaxed = list()
+    for node in G.nodes():
+        SP[node] = math.inf
+        parent[node] = None
+        unrelaxed.append(node)
+    SP[source] = 0
+
+    # dijkstra
+    while unrelaxed:
+        node = min(unrelaxed, key = lambda node : SP[node])
+        unrelaxed.remove(node)
+        if SP[node] == math.inf: break
+        for child in G[node]:
+            # skip unqualified edges
+            if direction == 'up':
+                if hierarchical_order[child] < hierarchical_order[node]: continue
+            if direction == 'down':
+                if hierarchical_order[child] > hierarchical_order[node]: continue
+
+            # If we're building a down graph, we need to use reverse weights
+            if direction == 'down':
+                if node not in G[child]: continue
+                distance = SP[node] + G[child][node][weight]
+            else:
+                distance = SP[node] + G[node][child][weight]
+            if distance < SP[child]:
+                SP[child] = distance
+                parent[child] = node
+    return parent, SP
+
+def merge_graphs(up_SP, down_SP):
+    minimum = math.inf
+    merge_node = None
+    for i in up_SP:
+        if down_SP[i] == math.inf: continue
+        if down_SP[i] + up_SP[i] < minimum:
+            minimum = down_SP[i] + up_SP[i]
+            merge_node = i
+
+    return minimum, merge_node
+
+def build_route(G,origin, destination, parent):
+    if destination not in G[origin]:
+        # We need the parent of the destination instead
+        return build_route(G,origin,parent[destination], parent) + [destination]
+    
+    edge = G[origin][destination]
+    if 'midpoint' in edge and 'osmid' not in edge: # This is a contracted edge
+        before = build_route(G,origin,edge['midpoint'], parent)
+        after = build_route(G,edge['midpoint'], destination, parent)
+        return before[:-1] + after
+    return [origin,destination]
+
+
+

@@ -12,6 +12,7 @@ from smart_mobility_utilities.common import *
 from typing import List
 from smart_mobility_utilities.children import get_children, get_beam
 from smart_mobility_utilities.problem import astar_heuristic
+from smart_mobility_utilities.contraction import *
 import heapq
 import math
 from time import process_time
@@ -258,6 +259,63 @@ def bidirectional_astar(G: networkx.MultiDiGraph, origin: Node, destination: Nod
                 frontier_b.append(child)
             altr_expand = True
     return route
+
+def contraction_hierarchy_generate(G):
+    # Remove self-loops and parallel edges
+    clean_G = networkx.DiGraph()
+    for u in G.nodes:
+        for v in G[u]:
+            if u == v: G.remove_edge(u,v); continue
+            if len(G[u][v]) > 1:
+                keep = min(G[u][v], key=lambda x:G[u][v][x]['length'])
+                keep = G[u][v][keep]
+                clean_G.add_edge(u,v,**keep)
+                continue
+            clean_G.add_edge(u,v,**G[u][v][0])
+
+    G = clean_G
+
+    # Using functions from smart_mobility_utilities, we can generate shortest paths and edge differences very quickly
+    
+    sp = shortest_paths(G)
+    ed = edge_differences(G,sp)
+    edges_before = [*G.edges()]
+    contract_graph(G,ed,sp) # Contract the graph according to ED
+    hierarchical_order = dict()
+    for order, node in enumerate(ed):
+        hierarchical_order[node] = order
+    
+    return G, hierarchical_order
+
+def bidirectional_dijkstra_with_contraction(G, start, end, hierarchical_order, cost = False):
+    # Define the start and end
+    start = 36603405
+    end = 24959560
+
+    # Generate the upward and downward graphs
+    up, up_SP = generate_dijkstra(G,start,hierarchical_order)
+    down, down_SP = generate_dijkstra(G,end,hierarchical_order,'down')
+
+    minimum = math.inf
+    merge_node = None
+
+    for x in up_SP:
+        if x == start or x == end: continue
+        if up_SP[x] == math.inf or down_SP[x] == math.inf: continue
+        total = up_SP[x] + down_SP[x]
+        if total < minimum: 
+            minimum = total
+            merge_node = x
+
+    route1 = build_route(G,start,merge_node,up)
+    route2 = build_route(G,end,merge_node,down)
+    if cost: return route1[:-1] + route2[::-1], minimum
+    return route1[:-1] + route2[::-1]
+
+
+
+
+
 
 def benchmark(algorithm,use_G=True,include_cost=True,**kwargs):
     G = kwargs.pop('G') if not use_G else kwargs['G']

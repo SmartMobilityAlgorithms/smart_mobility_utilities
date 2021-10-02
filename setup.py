@@ -12,7 +12,7 @@ with open("LICENSE", encoding="utf-8-sig") as f:
 
 setup(
     name='smart_mobility_utilities',
-    version='0.0.5',
+    version='0.0.6',
     author='Alaa Khamis and Yinan Wang',
     long_description=long_description,
     long_description_content_type="text/markdown",

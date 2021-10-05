@@ -1,10 +1,8 @@
 """ Provides some utilities for specific problems/algorithms like heuristic functions """
 
 import math
-import heapq
 import random
 import itertools
-from collections import deque
 import numpy as np
 
 from .common import *

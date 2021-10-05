@@ -5,6 +5,14 @@ from itertools import islice
 import copy
 from smart_mobility_utilities.common import Node
 
+def shortest_path_with_failed_nodes_single(G,route,failed:list):
+    i = 1
+    j = len(route) -2
+    result = shortest_path_with_failed_nodes(G,route,i,j,failed)
+    if result is math.inf: return result
+    path, i,j, r = result
+    return r
+
 def shortest_path_with_failed_nodes(G, route ,i,j, failed : list):
     source = route[i-1]
     target = route[j+1]

@@ -38,18 +38,21 @@ class poi:
     ... 'University of Toronto, St George Street, University—Rosedale, Old Toronto, Toronto, Peel, Golden Horseshoe, Ontario, M5T 2Z9, Canada'
 
     """
-    def __init__(self, name, country):
-        self.__geo_decode(name, country)
+    def __init__(self, name, country, lat = 0, lng = 0):
+            self.__geo_decode(name, country, lat, lng)
 
     """ Calls Nominatim API for geodecoding the address
     """
 
-    def __geo_decode(self, name, country):
+    def __geo_decode(self, name, country, lat=0, lng=0):
 
         # check https://nominatim.org/release-docs/develop/
 
         # try to issue this request from your terminal or smth to see the full response
-        response = requests.get(f'https://nominatim.openstreetmap.org/search?q={name} - {country}&format=geocodejson')
+        if lat != 0 and lng !=0:
+            response = requests.get(f'https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=geocodejson')
+        else:
+            response = requests.get(f'https://nominatim.openstreetmap.org/search?q={name} - {country}&format=geocodejson')
 
         if response.status_code != 200:
             raise ValueError("We couldn't decode the address, please make sure you entered it correctly")

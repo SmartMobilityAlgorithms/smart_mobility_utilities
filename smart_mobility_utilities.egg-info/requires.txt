@@ -1,5 +1,5 @@
 networkx
-typing
 numpy
 pandas
 requests
+typing

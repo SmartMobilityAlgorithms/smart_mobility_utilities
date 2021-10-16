@@ -1,6 +1,9 @@
 import requests
 from ipywidgets import HTML
-from ipyleaflet import Map, Marker, AntPath, Popup
+from ipyleaflet import Map, Marker, AntPath
+import folium
+import folium.plugins
+import polyline
 
 
 """Class for creating POI (point of interest) with its full detailed geographic data
@@ -96,7 +99,7 @@ class poi:
                     and such things. For EXACTLY how they do it please go to Project-OSRM/osrm-backend/profiles/car.lua
                     in their github account
     """
-    def route_to(self, destination, mode = "driving"):
+    def route_to(self, destination, mode = "driving", polyline=False):
         src = self.coordinates
         dest = destination.coordinates
 
@@ -109,6 +112,7 @@ class poi:
             raise ValueError(f"OSRM couldn't find a route between {src} and {dest}")
 
         route = response_json["routes"][0]
+        if polyline: return route
         cost = route["distance"]
         duration = route["duration"]
         legs = route["legs"][0]
@@ -221,4 +225,64 @@ def drawPOIS(POIS, zoom=12):
         marker.popup = text
         m.add_layer(marker)
 
+    return m
+
+def number_DivIcon(color,number):
+    """ Create a 'numbered' icon
+    
+    """
+    icon = folium.DivIcon(
+            icon_size=(150,36),
+            icon_anchor=(12,40),
+#             html='<div style="font-size: 18pt; align:center, color : black">' + '{:02d}'.format(num+1) + '</div>',
+            html="""<span class="fa-stack " style="font-size: 12pt" >
+                    <span class="fa fa-circle-o fa-stack-2x" style="color : {:s}"></span>
+                    <strong class="fa-stack-1x">
+                         {:2d}  
+                    </strong>
+                </span>""".format(color,number)
+        )
+    return icon
+
+def getRouteBounds(route):
+    minLat = min(route, key=lambda x:x[0])
+    maxLat = max(route, key=lambda x:x[0])
+    minLng = min(route, key=lambda x:x[1])
+    maxLng = max(route, key=lambda x:x[1])
+    return [(minLat, minLng), (maxLat, maxLng)]
+
+# This function draws POIS on a folium map, with markers designating route order.
+def drawRouteOrder(route, POIS, order, zoom=12):
+    # POIS: list of coords
+
+    bounds = getRouteBounds(route)
+    m = folium.Map(zoom_start=zoom)
+    m.fit_bounds(bounds)
+    ordered_route = [POIS[x-1] for x in order]
+
+    # Add markers
+    for i in range(len(POIS)):
+        loc = POIS[i].coordinates[::-1]
+        folium.Marker(location=loc, icon=folium.Icon(color='white', icon_color='white')).add_to(m)
+        folium.Marker(location=loc, icon=number_DivIcon('blue',order.index(i+1)+1)).add_to(m)
+    
+    # Add path
+    master_route = []
+    for i in range(len(ordered_route)-1):
+        n = ordered_route[i]
+        n2 = ordered_route[i+1]
+        r = n.route_to(n2, polyline=True)
+        p = polyline.decode(r['geometry'])
+        master_route.extend(p)
+        
+    
+    folium.plugins.AntPath(
+        locations = master_route,
+        dash_array=[1, 10],
+        delay=1000,
+        color='red',
+        pulse_color='orange'
+    ).add_to(m)
+        
+    
     return m

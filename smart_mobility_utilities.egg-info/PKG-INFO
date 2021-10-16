@@ -1,33 +1,30 @@
 Metadata-Version: 2.1
 Name: smart-mobility-utilities
-Version: 0.0.7
+Version: 0.0.8
 Summary: UNKNOWN
 Home-page: UNKNOWN
 Author: Alaa Khamis and Yinan Wang
 Author-email: yinanwang@sierra.one
 License: MIT
+Description: # Smart Mobility Utilities (Alpha)
+        
+        This release of the Smart Mobility Utilities toolset is meant to be a preview.
+        
+        Currently, the following modules are working:
+        
+        - `children.py`
+        - `common.py`
+        - `contraction.py`
+        - `solvers.py`
+        
+        
+        These modules need imports fixed:
+        - `jupyter.py`
+        - `poi.py`
+        - `problem.py`
+        - `search.py`
+        - `viz.py`
+        
 Platform: UNKNOWN
 Requires-Python: >=3.6
 Description-Content-Type: text/markdown
-License-File: LICENSE
-
-# Smart Mobility Utilities (Alpha)
-
-This release of the Smart Mobility Utilities toolset is meant to be a preview.
-
-Currently, the following modules are working:
-
-- `children.py`
-- `common.py`
-- `contraction.py`
-- `solvers.py`
-
-
-These modules need imports fixed:
-- `jupyter.py`
-- `poi.py`
-- `problem.py`
-- `search.py`
-- `viz.py`
-
-

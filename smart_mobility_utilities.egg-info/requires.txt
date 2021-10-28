@@ -1,5 +1,6 @@
 networkx
+typing
 numpy
 pandas
 requests
-typing
+polyline

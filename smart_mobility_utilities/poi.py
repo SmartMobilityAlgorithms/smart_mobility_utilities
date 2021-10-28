@@ -252,11 +252,10 @@ def getRouteBounds(route):
     return [(minLat, minLng), (maxLat, maxLng)]
 
 # This function draws POIS on a folium map, with markers designating route order.
-def drawRouteOrder(route, POIS, order, zoom=12):
+def drawRouteOrder(route, POIS, order, zoom=12, colors=None, route_color='red'):
     # POIS: list of coords
-
-    bounds = getRouteBounds(route)
     m = folium.Map(zoom_start=zoom)
+    bounds = getRouteBounds(route)
     m.fit_bounds(bounds)
     ordered_route = [POIS[x-1] for x in order]
 
@@ -264,7 +263,13 @@ def drawRouteOrder(route, POIS, order, zoom=12):
     for i in range(len(POIS)):
         loc = POIS[i].coordinates[::-1]
         folium.Marker(location=loc, icon=folium.Icon(color='white', icon_color='white')).add_to(m)
-        folium.Marker(location=loc, icon=number_DivIcon('blue',order.index(i+1)+1)).add_to(m)
+        if colors:
+            color = colors[i]
+        else:
+            color='blue'
+
+        folium.Marker(location=loc, icon=number_DivIcon(color,order.index(i+1)+1)).add_to(m)
+
     
     # Add path
     master_route = []
@@ -280,7 +285,7 @@ def drawRouteOrder(route, POIS, order, zoom=12):
         locations = master_route,
         dash_array=[1, 10],
         delay=1000,
-        color='red',
+        color=route_color,
         pulse_color='orange'
     ).add_to(m)
         

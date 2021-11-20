@@ -227,7 +227,7 @@ def drawPOIS(POIS, zoom=12):
 
     return m
 
-def number_DivIcon(color,number):
+def number_DivIcon(color,number, prefix=""):
     """ Create a 'numbered' icon
     
     """
@@ -238,10 +238,11 @@ def number_DivIcon(color,number):
             html="""<span class="fa-stack " style="font-size: 12pt" >
                     <span class="fa fa-circle-o fa-stack-2x" style="color : {:s}"></span>
                     <strong class="fa-stack-1x">
-                         {:2d}  
+                         {:s}{:d}  
                     </strong>
-                </span>""".format(color,number)
+                </span>""".format(color,prefix,number)
         )
+
     return icon
 
 def getRouteBounds(route):
@@ -252,11 +253,12 @@ def getRouteBounds(route):
     return [(minLat, minLng), (maxLat, maxLng)]
 
 # This function draws POIS on a folium map, with markers designating route order.
-def drawRouteOrder(route, POIS, order, zoom=12, colors=None, route_color='red'):
+def drawRouteOrder(route, POIS, order, zoom=12, colors=None, route_color='red', m=None, prefix=""):
     # POIS: list of coords
-    m = folium.Map(zoom_start=zoom)
-    bounds = getRouteBounds(route)
-    m.fit_bounds(bounds)
+    if not m:
+        m = folium.Map(zoom_start=zoom)
+        bounds = getRouteBounds(route)
+        m.fit_bounds(bounds)
     ordered_route = [POIS[x-1] for x in order]
 
     # Add markers
@@ -268,7 +270,7 @@ def drawRouteOrder(route, POIS, order, zoom=12, colors=None, route_color='red'):
         else:
             color='blue'
 
-        folium.Marker(location=loc, icon=number_DivIcon(color,order.index(i+1)+1)).add_to(m)
+        folium.Marker(location=loc, icon=number_DivIcon(color,order.index(i+1)+1, prefix=prefix)).add_to(m)
 
     
     # Add path

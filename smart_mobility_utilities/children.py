@@ -100,6 +100,7 @@ def children_route(G, route, limit):
                                                         # because these nodes already exit
             results.append(stitched)
             if len(results) == limit: return results
+    return results
 
 def children_route_handler(args):
     return children_route(*args)
